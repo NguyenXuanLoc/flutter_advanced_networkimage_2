@@ -24,7 +24,8 @@ class MyApp extends StatefulWidget {
 }
 
 class Example extends State<MyApp> {
-  final String url = 'https://openexpoeurope.com/wp-content/uploads/2019/12/flutter-logo-sharing.png';
+  final String url =
+      'https://openexpoeurope.com/wp-content/uploads/2019/12/flutter-logo-sharing.png';
   final String svgUrl =
       'https://github.com/dart-lang/site-shared/raw/master/src/_assets/image/flutter/logo/default.svg';
 
@@ -58,7 +59,8 @@ class Example extends State<MyApp> {
 }
 
 class LoadImage extends StatelessWidget {
-  const LoadImage({required this.url, required this.svgUrl, Key? key}) : super(key: key);
+  const LoadImage({required this.url, required this.svgUrl, Key? key})
+      : super(key: key);
 
   final String url;
   final String svgUrl;
@@ -112,15 +114,7 @@ class LoadImage extends StatelessWidget {
           child: SvgPicture(
             AdvancedNetworkSvg(
               svgUrl, //svgByteDecoder
-              (theme) => (bytes, colorFilter, key) {
-                return svg.svgPictureDecoder(
-                  bytes ?? Uint8List.fromList(const []),
-                  false,
-                  colorFilter,
-                  key,
-                  theme: theme,
-                );
-              },
+              SvgPicture.svgByteDecoder,
             ),
           ),
         ),

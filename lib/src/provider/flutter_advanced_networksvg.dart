@@ -13,33 +13,42 @@ import 'package:flutter_advanced_networkimage_2/src/disk_cache.dart';
 import 'package:flutter_advanced_networkimage_2/src/utils.dart';
 
 /// Fetches the given URL from the network, associating it with some options.
-class AdvancedNetworkSvg extends PictureProvider<AdvancedNetworkSvg, Uint8List?> {
-  AdvancedNetworkSvg(
-    this.url,
-    PictureInfoDecoderBuilder<Uint8List?> decoder, {
-    this.scale = 1.0,
-    this.header,
-    this.colorFilter,
-    this.useDiskCache = false,
-    this.retryLimit = 5,
-    this.retryDuration = const Duration(milliseconds: 500),
-    this.retryDurationFactor = 1.5,
-    this.timeoutDuration = const Duration(seconds: 5),
-    this.loadedCallback,
-    this.loadFailedCallback,
-    this.fallbackAssetImage,
-    this.fallbackImage,
-    this.cacheRule,
-    this.getRealUrl,
-    this.printError = false,
-    this.skipRetryStatusCode,
-  }) : super(colorFilter, decoderBuilder: decoder);
+class AdvancedNetworkSvg extends PictureProvider<AdvancedNetworkSvg> {
+  const AdvancedNetworkSvg(this.url,
+      this.decoder, {
+        this.scale: 1.0,
+        this.header,
+        this.colorFilter,
+        this.useDiskCache: false,
+        this.retryLimit: 5,
+        this.retryDuration: const Duration(milliseconds: 500),
+        this.retryDurationFactor: 1.5,
+        this.timeoutDuration: const Duration(seconds: 5),
+        this.loadedCallback,
+        this.loadFailedCallback,
+        this.fallbackAssetImage,
+        this.fallbackImage,
+        this.cacheRule,
+        this.getRealUrl,
+        this.printError = false,
+        this.skipRetryStatusCode,
+      })
+      : assert(url != null),
+        assert(scale != null),
+        assert(useDiskCache != null),
+        assert(retryLimit != null),
+        assert(retryDuration != null),
+        assert(printError != null),
+        super(null);
 
   /// The URL from which the image will be fetched.
-  final String url;
+  final String? url;
+
+  /// The decoder provided by flutter_svg (svgByteDecoder or svgByteDecoderOutsideViewBox)
+  final PictureInfoDecoder<Uint8List>? decoder;
 
   /// The scale to place in the [ImageInfo] object of the image.
-  final double scale;
+  final double? scale;
 
   /// The HTTP headers that will be used with [http] to fetch image from network.
   final Map<String, String>? header;
@@ -48,19 +57,19 @@ class AdvancedNetworkSvg extends PictureProvider<AdvancedNetworkSvg, Uint8List?>
   final ColorFilter? colorFilter;
 
   /// The flag control the disk cache will be used or not.
-  final bool useDiskCache;
+  final bool? useDiskCache;
 
   /// The retry limit will be used to limit the retry attempts.
-  final int retryLimit;
+  final int? retryLimit;
 
   /// The retry duration will give the interval between the retries.
-  final Duration retryDuration;
+  final Duration? retryDuration;
 
   /// Apply factor to control retry duration between retry.
-  final double retryDurationFactor;
+  final double? retryDurationFactor;
 
   /// The timeout duration will give the timeout to a fetching function.
-  final Duration timeoutDuration;
+  final Duration? timeoutDuration;
 
   /// The callback will be executed when the image loaded.
   final Function? loadedCallback;
@@ -82,7 +91,7 @@ class AdvancedNetworkSvg extends PictureProvider<AdvancedNetworkSvg, Uint8List?>
   final UrlResolver? getRealUrl;
 
   /// Print error messages.
-  final bool printError;
+  final bool? printError;
 
   /// The [HttpStatus] code that you can skip retrying if you meet them.
   final List<int>? skipRetryStatusCode;
@@ -105,38 +114,45 @@ class AdvancedNetworkSvg extends PictureProvider<AdvancedNetworkSvg, Uint8List?>
   }
 
   Future<bool> evict({bool disk = false}) async {
-    return disk ? await removeFromCache(url) : false;
+    assert(disk != null);
+
+    if (disk) {
+      return removeFromCache(url!);
+    }
+    return false;
   }
 
   Future<PictureInfo> _loadAsync(AdvancedNetworkSvg key,
       {PictureErrorListener? onError}) async {
     assert(key == this);
 
-    if (useDiskCache) {
+    if (useDiskCache!) {
       try {
         Uint8List? _diskCache = await loadFromDiskCache();
         if (key.loadedCallback != null) key.loadedCallback!();
-        return await decode(_diskCache, key.colorFilter, key.toString(),
-            onError: onError);
+        return await decode(_diskCache!, key.colorFilter, key.toString(),
+            onError: onError!);
       } catch (e) {
-        if (key.printError) print(e);
+        if (key.printError!) print(e);
       }
     }
 
     Uint8List? imageData = await loadFromRemote(
-      key.url,
+      key.url!,
       key.header,
-      key.retryLimit,
-      key.retryDuration,
-      key.retryDurationFactor,
-      key.timeoutDuration,
+      key.retryLimit!,
+      key.retryDuration!,
+      key.retryDurationFactor!,
+      key.timeoutDuration!,
       null,
       key.getRealUrl,
-      printError: key.printError,
+      printError: key.printError!,
     );
     if (imageData != null) {
       if (key.loadedCallback != null) key.loadedCallback!();
-      return await decode(imageData, key.colorFilter, key.toString(),
+      return await decode(
+          imageData, key.colorFilter,
+          key.toString(),
           onError: onError);
     }
 
@@ -144,23 +160,23 @@ class AdvancedNetworkSvg extends PictureProvider<AdvancedNetworkSvg, Uint8List?>
     if (key.fallbackAssetImage != null) {
       ByteData imageData = await rootBundle.load(key.fallbackAssetImage!);
       return await decode(
-          imageData.buffer.asUint8List(), key.colorFilter, key.toString(),
-          onError: onError);
+          imageData.buffer.asUint8List(), key.colorFilter!, key.toString(),
+          onError: onError!);
     }
     if (key.fallbackImage != null)
-      return await decode(key.fallbackImage, key.colorFilter, key.toString(),
-          onError: onError);
+      return await decode(key.fallbackImage!, key.colorFilter!, key.toString(),
+          onError: onError!);
 
     return Future.error(StateError('Failed to load $url.'));
   }
 
-  Future<PictureInfo> decode(
-      Uint8List? imageData, ColorFilter? colorFilter, String keyString,
+  Future<PictureInfo> decode(Uint8List imageData, ColorFilter? colorFilter,
+      String keyString,
       {PictureErrorListener? onError}) {
     if (onError != null)
-      // ignore: invalid_return_type_for_catch_error
-      return decoder(imageData, colorFilter, keyString)..catchError(onError);
-    return decoder(imageData, colorFilter, keyString);
+      return decoder!(imageData, colorFilter, keyString)
+        ..catchError(onError);
+    return decoder!(imageData, colorFilter, keyString);
   }
 
   /// Load the disk cache
@@ -172,11 +188,11 @@ class AdvancedNetworkSvg extends PictureProvider<AdvancedNetworkSvg, Uint8List?>
   Future<Uint8List?> loadFromDiskCache() async {
     AdvancedNetworkSvg key = this;
 
-    String uId = uid(key.url);
+    String uId = uid(key.url!);
 
     if (key.cacheRule == null) {
       Directory _cacheImagesDirectory =
-          Directory(join((await getTemporaryDirectory()).path, 'imagecache'));
+      Directory(join((await getTemporaryDirectory()).path, 'imagecache'));
       if (_cacheImagesDirectory.existsSync()) {
         File _cacheImageFile = File(join(_cacheImagesDirectory.path, uId));
         if (_cacheImageFile.existsSync()) {
@@ -187,16 +203,16 @@ class AdvancedNetworkSvg extends PictureProvider<AdvancedNetworkSvg, Uint8List?>
       }
 
       Uint8List? imageData = await loadFromRemote(
-        key.url,
+        key.url!,
         key.header,
-        key.retryLimit,
-        key.retryDuration,
-        key.retryDurationFactor,
-        key.timeoutDuration,
+        key.retryLimit!,
+        key.retryDuration!,
+        key.retryDurationFactor!,
+        key.timeoutDuration!,
         null,
         key.getRealUrl,
         skipRetryStatusCode: key.skipRetryStatusCode,
-        printError: key.printError,
+        printError: key.printError!,
       );
       if (imageData != null) {
         await (File(join(_cacheImagesDirectory.path, uId)))
@@ -209,15 +225,15 @@ class AdvancedNetworkSvg extends PictureProvider<AdvancedNetworkSvg, Uint8List?>
       if (data != null) return data;
 
       data = await loadFromRemote(
-        key.url,
+        key.url!,
         key.header,
-        key.retryLimit,
-        key.retryDuration,
-        key.retryDurationFactor,
-        key.timeoutDuration,
+        key.retryLimit!,
+        key.retryDuration!,
+        key.retryDurationFactor!,
+        key.timeoutDuration!,
         null,
         key.getRealUrl,
-        printError: key.printError,
+        printError: key.printError!,
       );
       if (data != null) {
         await diskCache.save(uId, data, key.cacheRule!);
@@ -241,8 +257,15 @@ class AdvancedNetworkSvg extends PictureProvider<AdvancedNetworkSvg, Uint8List?>
   }
 
   @override
-  int get hashCode => ui.hashValues(url, scale, useDiskCache, retryLimit,
-      retryDuration, retryDurationFactor, timeoutDuration);
+  int get hashCode =>
+      ui.hashValues(
+          url,
+          scale,
+          useDiskCache,
+          retryLimit,
+          retryDuration,
+          retryDurationFactor,
+          timeoutDuration);
 
   @override
   String toString() => '$runtimeType('
