@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui show Codec, hashValues;
+import 'dart:ui';
 
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -135,7 +136,7 @@ class AdvancedNetworkImage extends ImageProvider<AdvancedNetworkImage> {
   }
 
   @override
-  ImageStreamCompleter load(AdvancedNetworkImage key, DecoderCallback decode) {
+  ImageStreamCompleter loadImage(AdvancedNetworkImage key, ImageDecoderCallback decode) {
     final chunkEvents = StreamController<ImageChunkEvent>();
 
     return MultiFrameImageStreamCompleter(
@@ -151,7 +152,7 @@ class AdvancedNetworkImage extends ImageProvider<AdvancedNetworkImage> {
 
   Future<ui.Codec> _loadAsync(
     AdvancedNetworkImage key,
-    DecoderCallback decode,
+    ImageDecoderCallback decode,
     StreamController<ImageChunkEvent> chunkEvents,
   ) async {
     assert(key == this);
@@ -163,11 +164,9 @@ class AdvancedNetworkImage extends ImageProvider<AdvancedNetworkImage> {
           if (key.postProcessing != null)
             _diskCache = (await key.postProcessing!(_diskCache)) ?? _diskCache;
           if (key.loadedCallback != null) key.loadedCallback!();
-          return decode(
-            _diskCache,
-            cacheWidth: key.width,
-            cacheHeight: key.height,
-          );
+          return decode(await ImmutableBuffer.fromUint8List(_diskCache),
+              getTargetSize: (s, a) =>
+                  TargetImageSize(height: key.height, width: key.width));
         }
       } catch (e) {
         if (key.printError) print(e);
@@ -189,10 +188,9 @@ class AdvancedNetworkImage extends ImageProvider<AdvancedNetworkImage> {
           imageData = (await key.postProcessing!(imageData)) ?? imageData;
         if (key.loadedCallback != null) key.loadedCallback!();
         return decode(
-          imageData,
-          cacheWidth: key.width,
-          cacheHeight: key.height,
-        );
+            await ImmutableBuffer.fromUint8List(imageData.buffer.asUint8List()),
+            getTargetSize: (s, a) =>
+                TargetImageSize(height: key.height, width: key.width));
       }
     }
 
@@ -200,17 +198,14 @@ class AdvancedNetworkImage extends ImageProvider<AdvancedNetworkImage> {
     if (key.fallbackAssetImage != null) {
       ByteData imageData = await rootBundle.load(key.fallbackAssetImage!);
       return decode(
-        imageData.buffer.asUint8List(),
-        cacheWidth: key.width,
-        cacheHeight: key.height,
-      );
+          await ImmutableBuffer.fromUint8List(imageData.buffer.asUint8List()),
+          getTargetSize: (s, a) =>
+              TargetImageSize(height: key.height, width: key.width));
     }
     if (key.fallbackImage != null)
-      return decode(
-        key.fallbackImage!,
-        cacheWidth: key.width,
-        cacheHeight: key.height,
-      );
+      return decode(await ImmutableBuffer.fromUint8List(key.fallbackImage!),
+          getTargetSize: (s, a) =>
+              TargetImageSize(height: key.height, width: key.width));
 
     return Future.error(StateError('Failed to load $url.'));
   }
